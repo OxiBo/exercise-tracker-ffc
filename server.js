@@ -107,6 +107,7 @@ app.post("/api/exercise/add", async (req, res) => {
         return res.send("Something went wrong");
       } else {
         const { description, duration, date } = newExercise;
+        console.log(newExercise.date + ":" + typeof newExercise.date);
         return res.send({
           username: user.username,
           description,
@@ -125,7 +126,22 @@ app.get("/api/exercise/log", async (req, res) => {
   if (!user) {
     return res.send("Wrong userId/User is not found"); // return res.status(401).send({ error: "You must log in" });
   }
-  let exerciseLog = await Exercise.find({ _user: req.query.userId });
+
+  let exerciseLog = [];
+  // I can retrieve part of the log of any user by also passing along optional parameters of from & to or limit. (Date format yyyy-mm-dd, limit = int)
+  let findFrom, findTo;
+  if (req.query.from && req.query.from) {
+    findFrom = new Date(req.query.from);
+    findTo = new Date(req.query.to);
+    exerciseLog = await Exercise.find({ _user: req.query.userId })
+      .find({
+        date: { $gte: findFrom, $lt: findTo }
+      })
+      .limit(+req.query.limit); // limit argument must be numeric
+  } else {
+    exerciseLog = await Exercise.find({ _user: req.query.userId });
+  }
+
   exerciseLog = exerciseLog.map(({ description, duration, date }) => {
     return {
       description,
@@ -139,9 +155,6 @@ app.get("/api/exercise/log", async (req, res) => {
     { _id: user._id, username: user.username, count: exerciseLog.length },
     { log: exerciseLog }
   );
- // I can retrieve part of the log of any user by also passing along optional parameters of from & to or limit. (Date format yyyy-mm-dd, limit = int)
-
- console.log(req.query)
   res.send(logs);
 });
 
